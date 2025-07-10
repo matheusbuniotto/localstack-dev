@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(./scripts/configure-events.sh:*)",
+      "Bash(aws s3 cp:*)",
+      "Bash(aws sqs:*)",
+      "Bash(aws sns publish:*)"
+    ],
+    "deny": []
+  }
+}
