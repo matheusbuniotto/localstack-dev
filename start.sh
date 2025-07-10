@@ -1,36 +1,36 @@
 #!/bin/bash
 
-echo "🚀 Starting LocalStack Development Environment..."
+echo "🚀 Iniciando Ambiente de Desenvolvimento LocalStack..."
 
-# Load environment variables
+# Carregando variáveis de ambiente
 source .env-dev
 
-# Start LocalStack
-echo "📦 Starting LocalStack container..."
+# Start  LocalStack
+echo "📦 Iniciando container do LocalStack..."
 docker compose up -d
 
-# Wait for LocalStack to be ready
-echo "⏳ Waiting for LocalStack to be ready..."
+# Sonequinha do localstack
+echo "⏳ Aguardando o LocalStack ficar pronto..."
 sleep 10
 
-# Setup infrastructure
-echo "🔧 Setting up AWS infrastructure..."
+# Setup  de infra
+echo "🔧 Configurando infraestrutura AWS..."
 ./scripts/setup-infrastructure.sh
 
-# Configure event-driven architecture
-echo "🔗 Configuring event-driven architecture..."
+# Configurando cadeia dos eventos 
+echo "🔗 Configurando arquitetura orientada a eventos..."
 ./scripts/configure-events.sh
 
-echo "✅ LocalStack development environment is ready!"
+echo "✅ Ambiente de desenvolvimento LocalStack está pronto!"
 echo ""
-echo "📋 Available services:"
-echo "  • S3 buckets: input-bucket, output-bucket"
-echo "  • SNS topics: input-topic, output-topic"
-echo "  • SQS queues: input-queue, output-queue"
+echo "📋 Serviços disponíveis:"
+echo "  • Buckets S3: input-bucket, output-bucket"
+echo "  • Tópicos SNS: input-topic, output-topic"
+echo "  • Filas SQS: input-queue, output-queue"
 echo "  • Secrets Manager: api-keys"
 echo ""
-echo "🌐 LocalStack endpoint: http://localhost:4566"
-echo "📄 Environment variables loaded from .env-dev"
+echo "🌐 Endpoint do LocalStack: http://localhost:4566"
+echo "📄 Variáveis de ambiente carregadas de .env-dev"
 echo ""
-echo "🧪 To test the data flow:"
-echo "  aws s3 cp yourfile.txt s3://input-bucket/ --endpoint-url=http://localhost:4566"
+echo "🧪 Para testar o fluxo de dados:"
+echo "  aws s3 cp arquivo.txt s3://input-bucket/ --endpoint-url=http://localhost:4566"

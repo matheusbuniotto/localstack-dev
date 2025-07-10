@@ -25,9 +25,11 @@ Thumbs.db
 *.swp
 *.swo
 
-# AWS credentials (keep only .env-dev for development)
+# AWS credentials
 .aws/
 
 # Test files
 test-*
 *.test
+.claude
+
