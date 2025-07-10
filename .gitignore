@@ -1,0 +1,33 @@
+# Logs
+*.log
+logs/
+
+# LocalStack data
+.localstack/
+
+# Environment files
+.env
+.env.local
+.env.production
+
+# Temporary files
+*.tmp
+*.temp
+/tmp/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# AWS credentials (keep only .env-dev for development)
+.aws/
+
+# Test files
+test-*
+*.test
