@@ -33,13 +33,14 @@ show_menu() {
     echo "1. 📤 Enviar mensagem de teste para SNS"
     echo "2. 📋 Listar mensagens nas filas SQS"
     echo "3. 📦 Listar arquivos nos buckets S3"
-    echo "4. 🔍 Visualizar mensagens SQS em tempo real"
-    echo "5. 🧹 Limpar todas as filas SQS"
-    echo "6. 📊 Status rápido dos serviços"
-    echo "7. 🔐 Visualizar secrets"
-    echo "8. ➕ Adicionar nova secret"
-    echo "9. 🚪 Sair"
-    echo -n -e "${CYAN}Escolha uma opção (1-9): ${NC}"
+    echo "4. 📄 Enviar arquivo de teste para S3"
+    echo "5. 🔍 Visualizar mensagens SQS em tempo real"
+    echo "6. 🧹 Limpar todas as filas SQS"
+    echo "7. 📊 Status rápido dos serviços"
+    echo "8. 🔐 Visualizar secrets"
+    echo "9. ➕ Adicionar nova secret"
+    echo "10. 🚪 Sair"
+    echo -n -e "${CYAN}Escolha uma opção (1-10): ${NC}"
 }
 
 # Função para enviar mensagem de teste
@@ -130,6 +131,144 @@ list_s3_files() {
             echo -e "${YELLOW}⚠️  Bucket vazio${NC}"
         fi
     done
+}
+
+# Função para enviar arquivo de teste para S3
+send_test_file() {
+    echo -e "\n${BLUE}📄 Enviar Arquivo de Teste para S3${NC}"
+    
+    echo "Buckets disponíveis:"
+    echo "1. input-bucket (dispara fluxo S3 → SNS → SQS)"
+    echo "2. output-bucket (simula resultado de processamento)"
+    echo -n "Escolha o bucket (1-2): "
+    read bucket_choice
+    
+    case $bucket_choice in
+        1)
+            bucket_name="input-bucket"
+            file_prefix="teste-input"
+            ;;
+        2)
+            bucket_name="output-bucket"
+            file_prefix="teste-output"
+            ;;
+        *)
+            echo -e "${RED}❌ Opção inválida${NC}"
+            return 1
+            ;;
+    esac
+    
+    echo -e "\n${BLUE}Tipo de arquivo:${NC}"
+    echo "1. Texto simples"
+    echo "2. JSON de exemplo"
+    echo "3. CSV de exemplo"
+    echo "4. Arquivo personalizado"
+    echo -n "Escolha o tipo (1-4): "
+    read file_type
+    
+    timestamp=$(date +%Y%m%d-%H%M%S)
+    temp_file="/tmp/${file_prefix}-${timestamp}"
+    
+    case $file_type in
+        1)
+            file_name="${file_prefix}-${timestamp}.txt"
+            echo "Arquivo de teste criado em $(date)" > "$temp_file"
+            echo "Bucket: $bucket_name" >> "$temp_file"
+            echo "Timestamp: $timestamp" >> "$temp_file"
+            echo "Conteúdo: Dados de teste para validação do fluxo LocalStack" >> "$temp_file"
+            ;;
+        2)
+            file_name="${file_prefix}-${timestamp}.json"
+            cat > "$temp_file" << EOF
+{
+    "timestamp": "$(date -Iseconds)",
+    "bucket": "$bucket_name",
+    "test_data": {
+        "id": "$timestamp",
+        "message": "Arquivo JSON de teste",
+        "environment": "localstack-dev",
+        "processed": false
+    },
+    "metadata": {
+        "created_by": "dev-helpers",
+        "version": "1.0"
+    }
+}
+EOF
+            ;;
+        3)
+            file_name="${file_prefix}-${timestamp}.csv"
+            cat > "$temp_file" << EOF
+id,timestamp,bucket,message,status
+1,$(date -Iseconds),$bucket_name,Primeira linha de teste,pending
+2,$(date -Iseconds),$bucket_name,Segunda linha de teste,pending
+3,$(date -Iseconds),$bucket_name,Terceira linha de teste,pending
+EOF
+            ;;
+        4)
+            echo -n "Nome do arquivo (sem extensão): "
+            read custom_name
+            echo -n "Extensão do arquivo: "
+            read custom_ext
+            
+            if [ -z "$custom_name" ] || [ -z "$custom_ext" ]; then
+                echo -e "${RED}❌ Nome e extensão são obrigatórios${NC}"
+                return 1
+            fi
+            
+            file_name="${custom_name}-${timestamp}.${custom_ext}"
+            echo -n "Conteúdo do arquivo: "
+            read custom_content
+            
+            if [ -z "$custom_content" ]; then
+                echo "Arquivo personalizado criado em $(date)" > "$temp_file"
+            else
+                echo "$custom_content" > "$temp_file"
+            fi
+            ;;
+        *)
+            echo -e "${RED}❌ Opção inválida${NC}"
+            return 1
+            ;;
+    esac
+    
+    echo -e "\n${BLUE}Resumo do arquivo:${NC}"
+    echo -e "${PURPLE}Nome: $file_name${NC}"
+    echo -e "${PURPLE}Bucket: $bucket_name${NC}"
+    echo -e "${PURPLE}Tamanho: $(wc -c < "$temp_file") bytes${NC}"
+    echo -e "${PURPLE}Caminho temporário: $temp_file${NC}"
+    
+    echo -e "\n${BLUE}Preview do conteúdo:${NC}"
+    echo -e "${CYAN}$(head -n 5 "$temp_file")${NC}"
+    if [ $(wc -l < "$temp_file") -gt 5 ]; then
+        echo -e "${CYAN}... (arquivo truncado)${NC}"
+    fi
+    
+    echo -n -e "\n${YELLOW}Confirmar upload? (s/N): ${NC}"
+    read confirm
+    
+    if [[ $confirm =~ ^[Ss]$ ]]; then
+        echo -n "Enviando arquivo para S3... "
+        
+        if aws s3 cp "$temp_file" "s3://$bucket_name/$file_name" --endpoint-url=$AWS_ENDPOINT_URL; then
+            echo -e "${GREEN}✅ Arquivo enviado com sucesso!${NC}"
+            echo -e "${BLUE}📍 Localização: s3://$bucket_name/$file_name${NC}"
+            
+            if [ "$bucket_name" = "input-bucket" ]; then
+                echo -e "${CYAN}🔄 Arquivo enviado para input-bucket${NC}"
+                echo -e "${CYAN}⚡ Isso deve disparar: S3 → SNS → SQS${NC}"
+                echo -e "${CYAN}💡 Use a opção 2 (listar mensagens SQS) para verificar${NC}"
+                echo -e "${CYAN}💡 Ou use o monitor (./scripts/monitor.sh) para acompanhar${NC}"
+            fi
+        else
+            echo -e "${RED}❌ Erro ao enviar arquivo${NC}"
+        fi
+    else
+        echo -e "${BLUE}ℹ️  Upload cancelado${NC}"
+    fi
+    
+    # Limpeza
+    rm -f "$temp_file"
 }
 
 # Função para visualizar mensagens em tempo real
@@ -390,12 +529,13 @@ while true; do
         1) send_test_message ;;
         2) list_sqs_messages ;;
         3) list_s3_files ;;
-        4) watch_sqs_messages ;;
-        5) clear_queues ;;
-        6) quick_status ;;
-        7) view_secrets ;;
-        8) add_secret ;;
-        9) 
+        4) send_test_file ;;
+        5) watch_sqs_messages ;;
+        6) clear_queues ;;
+        7) quick_status ;;
+        8) view_secrets ;;
+        9) add_secret ;;
+        10) 
             echo -e "${GREEN}👋 Até logo!${NC}"
             exit 0
             ;;
