@@ -27,9 +27,9 @@ Thumbs.db
 
 # AWS credentials
 .aws/
-
+.claude
+*claude
 # Test files temporários
 /tmp/test-*
 *.test
-.claude
 

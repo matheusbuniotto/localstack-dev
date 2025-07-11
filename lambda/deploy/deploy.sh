@@ -16,7 +16,7 @@ LAMBDA_NAME="text-processor-lambda"
 LAMBDA_ZIP="text-processor-lambda.zip"
 LAMBDA_ROLE="arn:aws:iam::000000000000:role/lambda-execution-role"
 LAMBDA_HANDLER="lambda_function.lambda_handler"
-LAMBDA_RUNTIME="python3.9"
+LAMBDA_RUNTIME="python3.11"
 LAMBDA_TIMEOUT=30
 LAMBDA_MEMORY=256
 

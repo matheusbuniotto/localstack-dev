@@ -1,6 +1,6 @@
 # LocalStack - Ambiente de Desenvolvimento Local
 
-Este projeto configura um ambiente de desenvolvimento local usando LocalStack para simular serviços AWS.
+Este projeto configura um ambiente de desenvolvimento local usando LocalStack para simular serviços AWS com a arquitetura descrita abaixo:
 
 ## Arquitetura
 
@@ -25,7 +25,7 @@ Upload de Arquivo → S3 (input-bucket) → SNS (input-topic) → SQS (input-que
 
 ### 1. Clonar o repositório
 ```bash
-git clone <repo-url>
+git clone matheusbuniotto/localstack-dev
 cd localstack-dev
 ```
 
@@ -133,14 +133,7 @@ localstack-dev/
 └── README.md             # Este arquivo
 ```
 
-## Desenvolvimento em Equipe
-
-1. **Onboarding**: Novo membro só precisa executar `./start.sh`
-2. **Consistência**: Todos usam as mesmas configurações via `.env-dev`
-3. **Isolamento**: Cada desenvolvedor tem seu próprio ambiente local
-
 ## Próximos Passos
 
 - Integração com código Lambda (repositório separado)
-- Monitoramento e logs
 - Testes automatizados do fluxo completo
