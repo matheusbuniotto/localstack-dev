@@ -133,46 +133,122 @@ class TextProcessorService:
             filename = os.path.splitext(os.path.basename(input_key))[0]
             output_key = f"processed/{filename}-analysis-{timestamp}.json"
             
+            # Enriquecer análise com mensagem de sucesso
+            enhanced_analysis = {
+                "status": "SUCCESS",
+                "message": "Arquivo processado com sucesso pela Lambda",
+                "processing_completed_at": datetime.utcnow().isoformat(),
+                "input_file": input_key,
+                "output_file": output_key,
+                **analysis
+            }
+            
             # Converter análise para JSON
-            analysis_json = json.dumps(analysis, indent=2, ensure_ascii=False)
+            analysis_json = json.dumps(enhanced_analysis, indent=2, ensure_ascii=False)
             
             # Salvar no S3
             self.s3_client.put_object(
                 Bucket=self.aws_config.output_bucket,
                 Key=output_key,
                 Body=analysis_json,
-                ContentType='application/json'
+                ContentType='application/json',
+                Metadata={
+                    'processed-by': 'text-processor-lambda',
+                    'input-file': input_key,
+                    'processing-status': 'success'
+                }
             )
             
-            logger.info(f"Análise salva em s3://{self.aws_config.output_bucket}/{output_key}")
+            logger.info(f"✅ Análise salva com sucesso em s3://{self.aws_config.output_bucket}/{output_key}")
+            
+            # Também salvar arquivo de status separado
+            self._save_success_status(output_key, input_key)
+            
             return output_key
             
         except Exception as e:
             raise Exception(f"Erro ao salvar análise no S3: {str(e)}")
     
+    def _save_success_status(self, output_key: str, input_key: str):
+        """Salva arquivo de status de sucesso separado."""
+        try:
+            timestamp = datetime.utcnow().strftime('%Y%m%d-%H%M%S')
+            filename = os.path.splitext(os.path.basename(input_key))[0]
+            status_key = f"status/{filename}-SUCCESS-{timestamp}.txt"
+            
+            status_message = f"""🎉 PROCESSAMENTO CONCLUÍDO COM SUCESSO!
+
+📄 Arquivo de entrada: {input_key}
+📊 Arquivo de análise: {output_key}
+⏰ Processado em: {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')} UTC
+🤖 Processado por: text-processor-lambda
+✅ Status: SUCCESS
+
+O arquivo foi analisado e os resultados estão disponíveis no bucket de saída.
+"""
+            
+            self.s3_client.put_object(
+                Bucket=self.aws_config.output_bucket,
+                Key=status_key,
+                Body=status_message,
+                ContentType='text/plain; charset=utf-8',
+                Metadata={
+                    'type': 'success-status',
+                    'input-file': input_key,
+                    'analysis-file': output_key
+                }
+            )
+            
+            logger.info(f"✅ Status de sucesso salvo em s3://{self.aws_config.output_bucket}/{status_key}")
+            
+        except Exception as e:
+            logger.warning(f"⚠️ Erro ao salvar status de sucesso: {str(e)}")
+            # Não falhar o processamento por causa do arquivo de status
+    
     def _send_notification(self, analysis: Dict[str, Any], output_key: str):
         """Envia notificação SNS com resultado do processamento."""
         try:
             message = {
+                'status': 'SUCCESS',
+                'message': '🎉 Processamento de texto concluído com sucesso!',
                 'event': 'text_processing_completed',
                 'timestamp': datetime.utcnow().isoformat(),
                 'summary': {
                     'word_count': analysis['word_count'],
                     'char_count': analysis['char_count'],
-                    'processing_time': analysis['processing_time']
+                    'processing_time': analysis['processing_time'],
+                    'unique_words': analysis['text_stats']['unique_words'],
+                    'vocabulary_richness': analysis['text_stats']['vocabulary_richness']
                 },
-                'output_location': f"s3://{self.aws_config.output_bucket}/{output_key}",
-                'input_file': analysis['metadata']['input_key']
+                'files': {
+                    'input_file': analysis['metadata']['input_key'],
+                    'output_analysis': f"s3://{self.aws_config.output_bucket}/{output_key}",
+                    'output_status': f"s3://{self.aws_config.output_bucket}/status/{os.path.splitext(os.path.basename(analysis['metadata']['input_key']))[0]}-SUCCESS-{datetime.utcnow().strftime('%Y%m%d-%H%M%S')}.txt"
+                },
+                'processor': {
+                    'name': 'text-processor-lambda',
+                    'version': '1.0'
+                }
             }
             
             self.sns_client.publish(
                 TopicArn=self.aws_config.output_topic_arn,
-                Message=json.dumps(message, indent=2),
-                Subject='Processamento de Texto Concluído'
+                Message=json.dumps(message, indent=2, ensure_ascii=False),
+                Subject='✅ Processamento de Texto Concluído com Sucesso',
+                MessageAttributes={
+                    'status': {
+                        'DataType': 'String',
+                        'StringValue': 'SUCCESS'
+                    },
+                    'processor': {
+                        'DataType': 'String',
+                        'StringValue': 'text-processor-lambda'
+                    }
+                }
             )
             
-            logger.info("Notificação SNS enviada com sucesso")
+            logger.info("✅ Notificação SNS de sucesso enviada")
             
         except Exception as e:
-            logger.warning(f"Erro ao enviar notificação SNS: {str(e)}")
+            logger.warning(f"⚠️ Erro ao enviar notificação SNS: {str(e)}")
             # Não falhar o processamento por causa da notificação

@@ -12,7 +12,19 @@ class AWSConfig:
     def __init__(self):
         # Configurações básicas
         self.region = os.getenv('AWS_DEFAULT_REGION', 'us-east-1')
-        self.endpoint_url = os.getenv('AWS_ENDPOINT_URL')  # None para AWS real
+        
+        # Configuração do endpoint para LocalStack
+        # Dentro da Lambda, usar o endpoint interno do LocalStack
+        self.endpoint_url = os.getenv('AWS_ENDPOINT_URL')
+        
+        # Se estiver rodando na Lambda dentro do LocalStack, usar endpoint interno
+        if self.endpoint_url and 'localhost' in self.endpoint_url:
+            # Dentro do LocalStack, usar endpoint interno
+            self.endpoint_url = self.endpoint_url.replace('localhost', 'localstack')
+        
+        # Fallback para LocalStack host padrão se não definido
+        if not self.endpoint_url:
+            self.endpoint_url = 'http://localstack:4566'
         
         # Recursos AWS
         self.input_bucket = os.getenv('S3_INPUT_BUCKET', 'input-bucket')
