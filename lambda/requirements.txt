@@ -1,0 +1,15 @@
+# AWS SDK
+boto3>=1.26.0
+
+# Utilities
+python-dateutil>=2.8.0
+
+# Future: Gemini + LangGraph
+# google-generativeai>=0.3.0
+# langgraph>=0.1.0
+# langchain>=0.1.0
+
+# Development/Testing (comentado para deploy)
+# pytest>=7.0.0
+# pytest-mock>=3.10.0
+# moto>=4.0.0
